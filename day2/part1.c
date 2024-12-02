@@ -4,26 +4,19 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-bool sortedDesc(int* arr, int len){
-    for(int x=0;x<len-1;++x){
-        if(arr[x] > arr[x+1]){
-            return false;
-        }
-    }
-    return true;
-}
-
-bool sortedAsc(int* arr, int len){
-    for(int x=0;x<len-1;++x){
-        if(arr[x] < arr[x+1]){
-            return false;
-        }
-    }
-    return true;
-}
-
-bool closeValues(int* arr, int len){
+bool safe(int* arr, int len){
+    bool sortedAsc = true;
+    bool sortedDesc = true;
     for(int x=0;x<len-1;x++){
+
+        if(arr[x] > arr[x+1]){
+           sortedDesc = false;
+        }
+
+        if(arr[x] < arr[x+1]){
+            sortedAsc = false;
+        }
+
         int distance =arr[x] - arr[x+1];
         if(distance<0){
             distance = -distance;
@@ -32,7 +25,7 @@ bool closeValues(int* arr, int len){
             return false;
         }
     }
-    return true;
+    return (sortedAsc|| sortedDesc);
 }
 
 int main(int argc, char * argv[]){
@@ -54,9 +47,7 @@ int main(int argc, char * argv[]){
             tokens[i++] = v;
             token = strtok(NULL,delimeter);
         }
-
-        if( (sortedDesc(tokens, i)  || sortedAsc(tokens,i))
-                && closeValues(tokens, i) ){
+        if(safe(tokens,i)){
             ++res;
         }
     }
