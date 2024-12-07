@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 typedef struct Node {
     int data;
@@ -19,13 +20,11 @@ Node* append(Node **head, int value) {
     newNode->data = value;
     newNode->next = NULL;
 
-    // If the list is empty, set head to the new node
     if (*head == NULL) {
         *head = newNode;
         return *head;
     }
 
-    // Traverse to the end of the list
     Node *current = *head;
     while (current->next != NULL) {
         current = current->next;
@@ -33,15 +32,6 @@ Node* append(Node **head, int value) {
     current->next = newNode;
 
     return *head;
-}
-
-void printList(Node *head) {
-    Node *current = head;
-    while (current != NULL) {
-        printf("%d -> ", current->data);
-        current = current->next;
-    }
-    printf("NULL\n");
 }
 
 // Free the linked list
@@ -54,11 +44,85 @@ void freeList(Node *head) {
     }
 }
 
+int middleValue(Node *head){
+    int count=0;
+    Node *current = head;
+    while(current != NULL){
+        ++count;
+        current = current->next;
+    }
+    int middlePos = (count/2) + 1; // c rounds down 😺
+    current = head;
+    for(int x=0;x<middlePos-1;++x){ 
+        current = current->next;
+    }
+    return current->data;
+}
+//Assumes value exists in pages 
+//returns 0 if no rule broke, returns value in wrong place if broken
+int isValid(Node *pages,int value, Node *rule){
+    Node *current = pages;
+    while(current->data !=value){
+        Node *r =rule;
+        while(r != NULL){
+            if(current->data == r->data){
+                return current->data;
+            }
+            r = r->next;
+        }
+        current = current->next;
+    }
+
+    return 0;
+}
+//swap nodes with given values 
+void swapNodes(struct Node** head, int x, int y) {
+    printf("Swapping %d and  %d\n",x,y);
+    if (x == y) return;
+
+    struct Node *prevX = NULL, *currX = *head;
+    while (currX && currX->data != x) {
+        prevX = currX;
+        currX = currX->next;
+    }
+
+    struct Node *prevY = NULL, *currY = *head;
+    while (currY && currY->data != y) {
+        prevY = currY;
+        currY = currY->next;
+    }
+
+    if (!currX || !currY) return;
+
+    if (prevX){
+        prevX->next = currY;
+    }
+    else{
+        *head = currY;
+    }
+    if (prevY){
+        prevY->next = currX;
+    }
+    else{
+        *head = currX;
+    }
+    struct Node* temp = currY->next;
+    currY->next = currX->next;
+    currX->next = temp;
+}
+void printList(Node *head) {
+    Node *current = head;
+    while (current != NULL) {
+        printf("%d -> ", current->data);
+        current = current->next;
+    }
+    printf("NULL\n");
+}
 int main(int argc, char * argv[]){
     FILE *fp = fopen(argv[1], "r");    
     assert(fp != NULL);
     
-    char line[50]; 
+    char line[100]; 
     int rule_count =0;
     while(fgets(line, sizeof(line),fp)){
         if(strcmp(line, "\n") == 0){
@@ -76,36 +140,71 @@ int main(int argc, char * argv[]){
     }
     
     char * end;
+    char * del = "|";
     //Read page ordering rules 
     while (fgets(line, sizeof(line), fp)) { 
-        //printf("%s\n",line);
         if(strcmp(line, "\n") == 0){
             break;
         }
-        char *token = strtok(line,"|");
+        char *token = strtok(line,del);
         int pos  = strtol(token, &end, 10);
-        token = strtok(NULL,"|");
+        token = strtok(NULL,del);
         int rule  = strtol(token, &end, 10);
-        printf("%d | %d\n",pos,rule);
         append(&rules[pos], rule);
-        
-
     } 
-    for (int i = 0; i < ruleSize; i++) {
-        if(rules[i] != NULL){
-            printf("Linked list at index %d: ", i);
-            printList(rules[i]);
-        }
-    }
-    //read pages
+
     int middlePageNumberSum =0;
+    int sortedPagesSum=0;
+    char *delimeter = ",";
     while (fgets(line, sizeof(line), fp)) { 
-        while(strtok(line,",") != NULL){
-            //convert each line into its own LL 
-            
+        printf("%s\n",line);
+        char *token = strtok(line,delimeter);
+        Node *pages = NULL;
+        while(token != NULL){
+            int t  = strtol(token, &end, 10);
+            append(&pages, t);
+            token = strtok(NULL, delimeter);
         }
-        //navigate through the LL checking if theres a rule. Then go through each next checking
-        //if it exists i??TBD
+        bool valid_update = true;   
+        Node *current = pages;
+        while(current != NULL){
+            int x = current->data;
+            if(rules[x] != NULL && isValid(pages,x,rules[x])!=0){
+                valid_update = false;
+            }
+            current = current->next;
+        }
+        int m = middleValue(pages);
+        if(valid_update){
+            middlePageNumberSum += m;
+            continue;
+        }
+
+        int sorted = false;
+        Node *a = pages; //stores the list as its sorted
+        while(sorted == false){
+            sorted = true;
+            Node * temp = a; // used to loop through all the nodes in the sorted list
+            while(temp != NULL){ //find the index for every rule that applies 
+                int x = temp->data;
+                if(rules[x] != NULL){ // if not valid swap positions
+                    int invalid = isValid(a, x, rules[x]);
+                    if(invalid !=0){
+                        swapNodes(&a, x,invalid );
+                        sorted = false;
+                    }
+                }
+                
+
+                temp = temp ->next;
+            }
+
+        }
+        printf("Sorted List "); 
+        printList(a);
+        int x = middleValue(a);
+        sortedPagesSum += x;
+        
     } 
     
     fclose(fp);
@@ -116,5 +215,7 @@ int main(int argc, char * argv[]){
 
     // Free the array of pointers
     free(rules);
+    printf("Part1: %d\n",middlePageNumberSum);
+    printf("Part2: %d\n",sortedPagesSum);
     return 0;
 } 
